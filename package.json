@@ -1,0 +1,21 @@
+{
+  "name": "gowabi-production-qa",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "playwright test",
+    "test:production": "playwright test --grep @catalog",
+    "test:login": "playwright test --grep @login",
+    "test:authenticated": "playwright test --grep @authenticated",
+    "test:list": "playwright test --list",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "22.10.2",
+    "dotenv": "16.4.7",
+    "typescript": "5.7.2"
+  }
+}

@@ -1,0 +1,52 @@
+name: Playwright QA
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize production traffic across this repository's workflow runs.
+concurrency:
+  group: gowabi-production-qa
+  cancel-in-progress: false
+
+jobs:
+  catalog:
+    name: TypeScript and anonymous catalog smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CI: 'true'
+      GOWABI_BASE_URL: https://www.gowabi.com
+      GOWABI_RUN_PRODUCTION: '1'
+      GOWABI_RUN_LOGIN: '0'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Discover tests
+        run: npm run test:list
+      - name: Install Chromium and Linux dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Run anonymous catalog test
+        id: catalog
+        run: npm run test:production
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.catalog.outcome != 'skipped' }}
+        with:
+          name: playwright-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
