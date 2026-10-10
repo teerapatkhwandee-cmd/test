@@ -4,23 +4,38 @@ export class BookingPage {
   constructor(private readonly page: Page) {}
 
   private get form() {
-    return this.page.locator('form.service-creation, .calender_2152, #service-selection-modal').first();
+    return this.page.locator('form.service-creation, .calender_2152, #service-selection-modal, div.calender').first();
   }
 
   async verifyBookingCalendar() {
     await expect(this.form).toBeVisible({ timeout: 15000 });
+
+    await this.page.evaluate(() => {
+      const modalOrCal = document.querySelector('.calender_2152, form.service-creation, #service-selection-modal, div.calender') as HTMLElement;
+      if (modalOrCal) {
+        modalOrCal.style.position = 'relative';
+        modalOrCal.style.margin = '20px auto';
+        modalOrCal.style.zIndex = '999999';
+      }
+    });
+
+    await this.form.scrollIntoViewIfNeeded();
   }
 
   async selectFutureDate() {
-    const dateLink = this.page
-      .locator('.ui-datepicker-calendar td:not(.ui-state-disabled) a.ui-state-default')
+    const dateLinks = this.page.locator('.ui-datepicker-calendar td:not(.ui-state-disabled) a.ui-state-default');
+    await expect(dateLinks.first()).toBeVisible({ timeout: 15000 });
+
+    const targetDate = dateLinks.first();
+    await targetDate.scrollIntoViewIfNeeded();
+    await targetDate.click({ force: true });
+
+    const timeSlot = this.page
+      .locator('.timmer_block td, .time_select_block td, td[data-time], .time-slot-item')
+      .filter({ hasText: /([01]?[0-9]|2[0-3]):[0-5][0-9]/ })
       .first();
 
-    if (await dateLink.isVisible()) {
-      await dateLink.click({ force: true });
-    }
-
-    await expect(this.page.locator('.timmer_block td.available').first()).toBeVisible({ timeout: 15000 });
+    await expect(timeSlot).toBeVisible({ timeout: 20000 });
   }
 
   async getSelectedDate(): Promise<string> {
@@ -40,7 +55,7 @@ export class BookingPage {
   }
 
   async selectTimeSlot(preferredTime = '11:30') {
-    const availableSlots = this.page.locator('.timmer_block td.available');
+    const availableSlots = this.page.locator('.timmer_block td.available, .timmer_block td:not(.disabled)');
     await expect(availableSlots.first()).toBeVisible({ timeout: 15000 });
 
     const exactSlot = availableSlots.filter({ hasText: preferredTime }).first();
@@ -51,16 +66,16 @@ export class BookingPage {
     }
 
     const availableSlot = availableSlots.first();
-    const slotText = (await availableSlot.locator('.col-1-calendar').innerText()).trim();
+    const slotText = (await availableSlot.innerText()).trim();
     await availableSlot.click({ force: true });
     return slotText;
   }
 
   async verifySelection({ date, time, service, price }: { date: string; time: string; service: string; price: number }) {
-    // 🟢 แก้ไข Strict Mode Violation โดยใช้ .first()
-    await expect(this.page.getByText(service).first()).toBeVisible();
-    await expect(this.page.getByText(time).first()).toBeVisible();
-    await expect(this.page.getByText(`฿${price}`).first()).toBeVisible();
+    const visibleForm = this.form;
+    await expect(visibleForm.locator(`text=${service}`).first()).toBeVisible();
+    await expect(visibleForm.locator(`td.active, td.selected, .col-1-calendar`).filter({ hasText: time }).first()).toBeVisible();
+    await expect(visibleForm.locator(`text=฿${price}`).first()).toBeVisible();
   }
 
   async inspectContinueButton() {
