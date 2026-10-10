@@ -1,7 +1,6 @@
 import { defineConfig } from '@playwright/test';
 import { ORIGIN } from './helpers/config';
 
-
 export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
@@ -14,6 +13,9 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: ORIGIN,
+    // 🟢 1. กำหนดขนาด Viewport มาตรฐานสำหรับ Desktop
+    viewport: { width: 1920, height: 1080 },
+    
     // Native window sizing cannot use device scale emulation.
     deviceScaleFactor: undefined,
     locale: 'en-US',
@@ -24,6 +26,20 @@ export default defineConfig({
     trace: 'off',
     screenshot: 'off',
     video: 'off',
+
+    // 🟢 2. เพิ่ม launchOptions เพื่อให้เวลาสั่งรัน --headed ตัวเบราว์เซอร์จะสั่งเปิดขยายเต็มหน้าจอ
+    launchOptions: {
+      args: ['--start-maximized'],
+    },
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    { 
+      name: 'chromium', 
+      use: { 
+        browserName: 'chromium',
+        // 🟢 3. ถ้าเปิด --headed ให้ใช้ขนาด Native Window (ไม่โดนล็อค viewport)
+        viewport: null,
+      } 
+    }
+  ],
 });

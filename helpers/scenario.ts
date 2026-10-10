@@ -1,13 +1,15 @@
-// Expected test data: change the selected scenario here, independently of page objects.
+
+// Expected test data for Strip Ministry of Waxing (Central Embassy)
+
 export const scenario = {
-  keyword: 'massage',
-  salon: 'Massage Home',
-  salonSlug: 'massage-home',
-  address: '5/9D Aqua Residences, Bang Kho, Chom Thong, Bangkok, 10150',
-  service: 'Thai Massage',
-  serviceSlug: 'thai-massage',
+  keyword: 'Strip Ministry of Waxing',
+  salon: 'Strip Ministry of Waxing (Central Embassy)',
+  salonSlug: 'strip-ministry-of-waxing-central-embassy',
+  address: '4th Floor, Central Embassy, 1031 Ploenchit road, Pathumwan, Bangkok 10330',
+  service: 'x Strip (+ clipping down the front)',
+  serviceSlug: 'x-strip-clipping-down-the-front',
   durationMinutes: 60,
-  serviceId: '134870',
+  serviceId: '2122',
 } as const;
 
 export type SalonSelection = {

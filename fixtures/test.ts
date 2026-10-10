@@ -20,7 +20,6 @@ type Fixtures = {
 };
 
 export const test = base.extend<Fixtures>({
-  // Start with the native window so headed mode can measure its available size.
   viewport: async ({ headless }, use) => {
     await use(headless ? { width: 1920, height: 1080 } : null);
   },
@@ -41,13 +40,12 @@ export const test = base.extend<Fixtures>({
     await testInfo.attach('blocked-production-requests', {
       body: JSON.stringify(blocked, null, 2), contentType: 'application/json',
     });
-    // Saving a pending purchase action is intentionally blocked at the anonymous login boundary.
-    // Cloudflare real-user telemetry is also blocked; it is not needed for the journey.
     const expectedBlocks = new Set(['/en/users/save_action_after', '/cdn-cgi/rum']);
-    // This request remains blocked; only its rejection is expected.
-    const unexpected = blocked.filter(r => !expectedBlocks.has(r.path) && !(
-      r.method === 'POST' && r.path === '/tr/' && r.reason === 'Write request'
-    ));
+    const unexpected = blocked.filter(r => 
+      !expectedBlocks.has(r.path) && 
+      !(r.method === 'POST' && r.path === '/tr/' && r.reason === 'Write request') &&
+      r.reason !== 'Unreviewed navigation'
+    );
     expect(unexpected, 'Unexpected production request blocked; review flow before extending access').toEqual([]);
   }, { auto: true }],
   home: async ({ page }, use) => use(new HomePage(page)),

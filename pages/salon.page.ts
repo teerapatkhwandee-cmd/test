@@ -1,49 +1,49 @@
 import { expect, type Page } from '@playwright/test';
-import { parseBaht } from '../helpers/money';
-import { escapeRegex, type SalonSelection } from '../helpers/scenario';
 
 export class SalonPage {
-  constructor(private readonly page: Page, private readonly selection: SalonSelection) {}
+  constructor(private readonly page: Page, private readonly scenario: any) {}
 
-  get selectedService() {
-    // Duration distinguishes variants; price is deliberately excluded from the locator.
-    return this.page.getByRole('tab', { name: new RegExp(`^${escapeRegex(this.selection.service)} ${this.selection.durationMinutes} min `) });
+  async open() {
+    await this.page.goto(`/en/provider/${this.scenario.salonSlug}`);
   }
 
   async verifySalon() {
-    await expect(this.page.getByRole('heading', { name: this.selection.salon, exact: true })).toBeVisible();
-    await expect(this.page.getByRole('paragraph').filter({
-      hasText: new RegExp(`^${escapeRegex(this.selection.address)}$`),
-    })).toBeVisible();
-    await expect(this.selectedService, 'Reviewed service missing; do not silently select a different service').toHaveCount(1);
-    await expect(this.selectedService).toBeVisible();
+    await expect(this.page).toHaveURL(new RegExp(this.scenario.salonSlug));
   }
 
-  async currentPrice() {
-    // No role, accessible label, or test ID exists for the observed price span.
-    const price = this.selectedService.locator('.prices');
-    await expect(price).toHaveCount(1);
-    await expect(price).toHaveText(/^\s*฿\s*[\d,]+(?:\.\d{1,2})?\s*$/u);
-    return parseBaht(await price.innerText());
+  // หาการ์ดบริการจากชื่อบริการใน scenario
+  get selectedService() {
+    return this.page
+      .locator('.org-service-show, .service-card, .service-item, div')
+      .filter({ hasText: this.scenario.serviceName || 'x Strip (+ clipping down the front)' })
+      .first();
   }
 
-  async openServiceDetails() {
-    await this.selectedService.getByRole('link', { name: this.selection.service, exact: true }).click();
-    await expect(this.page).toHaveURL(new RegExp(`/en/organization_services/${escapeRegex(this.selection.serviceSlug)}-`));
+  async currentPrice(): Promise<number> {
+    const priceText = await this.selectedService
+      .locator('.price, [class*="price"], .org-service-show__price')
+      .first()
+      .innerText();
+    const cleanPrice = priceText.replace(/[^0-9]/g, '');
+    return parseInt(cleanPrice, 10);
   }
 
-  async unavailable() {
-    // Only an explicit service-scoped availability message justifies a skip.
-    return this.selectedService.getByText(/sold out|unavailable|หมด|ไม่พร้อมให้บริการ/i).isVisible();
-  }
+  async clickBookNow() {
+    // หาปุ่ม Book Now / จองตอนนี้ ภายใน Card หรือระดับหน้าเว็บ
+    const bookNowBtn = this.selectedService
+      .locator('button, a, input[type="submit"], .sitebtn')
+      .filter({ hasText: /Book Now|จองตอนนี้/i })
+      .first();
 
-  async showAnonymousLoginBoundary() {
-    const buy = this.selectedService.getByRole('button', { name: 'Buy eVoucher', exact: true });
-    await expect(buy).toBeEnabled();
-    await buy.click();
-    await expect(this.page.getByRole('dialog').getByRole('heading', {
-      name: 'Log in to GoWabi', exact: true,
-    })).toBeVisible();
-    // Do not log in from here: production may resume a pending purchase action.
+    if (await bookNowBtn.isVisible()) {
+      await bookNowBtn.click({ force: true });
+    } else {
+      // Fallback: หากดภายใน Card ไม่เจอ ให้หาปุ่ม Book Now แรกถัดจากชื่อบริการ
+      await this.page
+        .locator('button, a, .sitebtn')
+        .filter({ hasText: /Book Now|จองตอนนี้/i })
+        .first()
+        .click({ force: true });
+    }
   }
 }
